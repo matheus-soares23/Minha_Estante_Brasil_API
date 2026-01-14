@@ -1,0 +1,22 @@
+{
+  "name": "minha_estante_brasil",
+  "version": "1.0.0",
+  "description": "aplicação onde usuários podem criar lista de obras nacionais e dar notas para elas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matheus-soares23/Minha_Estante_Brasil.git"
+  },
+  "keywords": [
+    "estante-brasil"
+  ],
+  "author": "Matheus Soares",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/matheus-soares23/Minha_Estante_Brasil/issues"
+  },
+  "homepage": "https://github.com/matheus-soares23/Minha_Estante_Brasil#readme"
+}
