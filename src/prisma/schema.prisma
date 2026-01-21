@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookStatus {
+  published
+  forthcoming
+  cancelled
+}
+
+enum BookType {
+  novel
+  light_novel
+  web_novel
+  manga
+  anthology
+  short_story
+  other
+}
+
+enum ListStatus {
+  reading
+  completed
+  planned
+  dropped
+  on_hold
+}
+
+enum UserRole {
+  user
+  moderator
+  admin
+}
+
+model Book {
+  id              Int       @id @default(autoincrement())
+  title           String    @db.VarChar(255)
+  originalTitle   String?   @map("original_title") @db.VarChar(255)
+  synopsis        String?   @db.Text
+  publicationDate DateTime? @map("publication_date") @db.Date
+  coverImage      String?   @map("cover_image") @db.VarChar(1024)
+  pages           Int?
+  isbn10          String?   @map("isbn_10") @db.VarChar(20)
+  isbn13          String?   @map("isbn_13") @db.VarChar(20)
+  status          BookStatus?
+  type            BookType?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  authors      BookAuthor[]
+  genres       BookGenre[]
+  seriesBooks  SeriesBook[]
+  userBookList UserBookList[]
+  reviews      Review[]
+
+  @@map("books")
+}
+
+model Author {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  biography String?   @db.Text
+  birthDate DateTime? @map("birth_date") @db.Date
+  deathDate DateTime? @map("death_date") @db.Date
+  image     String?   @db.VarChar(1024)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  books BookAuthor[]
+
+  @@map("authors")
+}
+
+model Genre {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  slug        String?  @unique @db.VarChar(120)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  books BookGenre[]
+
+  @@map("genres")
+}
+
+model Series {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  slug        String?  @unique @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  books SeriesBook[]
+
+  @@map("series")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  profileImage String?  @map("profile_image") @db.VarChar(1024)
+  role         UserRole @default(user)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  bookList UserBookList[]
+  reviews  Review[]
+
+  @@map("users")
+}
+
+model BookAuthor {
+  bookId   Int     @map("book_id")
+  authorId Int     @map("author_id")
+  role     String? @db.VarChar(50)
+
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@map("books_authors")
+}
+
+model BookGenre {
+  bookId  Int @map("book_id")
+  genreId Int @map("genre_id")
+
+  book  Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, genreId])
+  @@map("books_genres")
+}
+
+model SeriesBook {
+  seriesId     Int  @map("series_id")
+  bookId       Int  @map("book_id")
+  volumeNumber Int? @map("volume_number")
+
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@id([seriesId, bookId])
+  @@map("series_books")
+}
+
+model UserBookList {
+  id         Int         @id @default(autoincrement())
+  userId     Int         @map("user_id")
+  bookId     Int         @map("book_id")
+  status     ListStatus?
+  rating     Int?
+  progress   Int?
+  startDate  DateTime?   @map("start_date") @db.Date
+  finishDate DateTime?   @map("finish_date") @db.Date
+  notes      String?     @db.Text
+  updatedAt  DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@map("user_book_list")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  bookId    Int      @map("book_id")
+  rating    Int?
+  title     String?  @db.VarChar(255)
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
