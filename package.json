@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/matheus-soares23/Minha_Estante_Brasil/issues"
   },
-  "homepage": "https://github.com/matheus-soares23/Minha_Estante_Brasil#readme"
+  "homepage": "https://github.com/matheus-soares23/Minha_Estante_Brasil#readme",
+  "dependencies": {
+    "nestjs": "^0.0.1"
+  }
 }
