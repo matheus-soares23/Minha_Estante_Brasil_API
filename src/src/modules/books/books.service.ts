@@ -1,98 +1,42 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateBookDto, UpdateBookDto } from './dto';
+import { IBookRepository } from '../../repositories/interfaces';
+import { BOOK_REPOSITORY } from '../../repositories/tokens';
 
 @Injectable()
 export class BooksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(BOOK_REPOSITORY)
+    private readonly bookRepository: IBookRepository,
+  ) {}
 
   async create(createBookDto: CreateBookDto) {
     const { authors, genreIds, ...bookData } = createBookDto;
 
-    return this.prisma.book.create({
-      data: {
-        title: bookData.title,
-        originalTitle: bookData.originalTitle,
-        synopsis: bookData.synopsis,
-        publicationDate: bookData.publicationDate
-          ? new Date(bookData.publicationDate)
-          : null,
-        coverImage: bookData.coverImage,
-        pages: bookData.pages,
-        isbn10: bookData.isbn10,
-        isbn13: bookData.isbn13,
-        status: bookData.status,
-        type: bookData.type,
-        authors: authors
-          ? {
-              create: authors.map((author) => ({
-                authorId: author.authorId,
-                role: author.role,
-              })),
-            }
-          : undefined,
-        genres: genreIds
-          ? {
-              create: genreIds.map((genreId) => ({
-                genreId,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        genres: {
-          include: {
-            genre: true,
-          },
-        },
-      },
+    return this.bookRepository.create({
+      title: bookData.title,
+      originalTitle: bookData.originalTitle,
+      synopsis: bookData.synopsis,
+      publicationDate: bookData.publicationDate
+        ? new Date(bookData.publicationDate)
+        : undefined,
+      coverImage: bookData.coverImage,
+      pages: bookData.pages,
+      isbn10: bookData.isbn10,
+      isbn13: bookData.isbn13,
+      status: bookData.status,
+      type: bookData.type,
+      authors,
+      genreIds,
     });
   }
 
   async findAll() {
-    return this.prisma.book.findMany({
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        genres: {
-          include: {
-            genre: true,
-          },
-        },
-      },
-      orderBy: { title: 'asc' },
-    });
+    return this.bookRepository.findAll();
   }
 
   async findOne(id: number) {
-    const book = await this.prisma.book.findUnique({
-      where: { id },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        genres: {
-          include: {
-            genre: true,
-          },
-        },
-        seriesBooks: {
-          include: {
-            series: true,
-          },
-        },
-      },
-    });
+    const book = await this.bookRepository.findOne(id);
 
     if (!book) {
       throw new NotFoundException(`Book with ID ${id} not found`);
@@ -102,28 +46,7 @@ export class BooksService {
   }
 
   async findByAuthor(authorId: number) {
-    return this.prisma.book.findMany({
-      where: {
-        authors: {
-          some: {
-            authorId,
-          },
-        },
-      },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        genres: {
-          include: {
-            genre: true,
-          },
-        },
-      },
-      orderBy: { title: 'asc' },
-    });
+    return this.bookRepository.findByAuthor(authorId);
   }
 
   async update(id: number, updateBookDto: UpdateBookDto) {
@@ -132,68 +55,33 @@ export class BooksService {
     const { authors, genreIds, ...bookData } = updateBookDto;
 
     if (authors) {
-      await this.prisma.bookAuthor.deleteMany({
-        where: { bookId: id },
-      });
+      await this.bookRepository.deleteBookAuthors(id);
     }
 
     if (genreIds) {
-      await this.prisma.bookGenre.deleteMany({
-        where: { bookId: id },
-      });
+      await this.bookRepository.deleteBookGenres(id);
     }
 
-    return this.prisma.book.update({
-      where: { id },
-      data: {
-        title: bookData.title,
-        originalTitle: bookData.originalTitle,
-        synopsis: bookData.synopsis,
-        publicationDate: bookData.publicationDate
-          ? new Date(bookData.publicationDate)
-          : undefined,
-        coverImage: bookData.coverImage,
-        pages: bookData.pages,
-        isbn10: bookData.isbn10,
-        isbn13: bookData.isbn13,
-        status: bookData.status,
-        type: bookData.type,
-        authors: authors
-          ? {
-              create: authors.map((author) => ({
-                authorId: author.authorId,
-                role: author.role,
-              })),
-            }
-          : undefined,
-        genres: genreIds
-          ? {
-              create: genreIds.map((genreId) => ({
-                genreId,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        genres: {
-          include: {
-            genre: true,
-          },
-        },
-      },
+    return this.bookRepository.update(id, {
+      title: bookData.title,
+      originalTitle: bookData.originalTitle,
+      synopsis: bookData.synopsis,
+      publicationDate: bookData.publicationDate
+        ? new Date(bookData.publicationDate)
+        : undefined,
+      coverImage: bookData.coverImage,
+      pages: bookData.pages,
+      isbn10: bookData.isbn10,
+      isbn13: bookData.isbn13,
+      status: bookData.status,
+      type: bookData.type,
+      authors,
+      genreIds,
     });
   }
 
   async remove(id: number) {
     await this.findOne(id);
-
-    return this.prisma.book.delete({
-      where: { id },
-    });
+    await this.bookRepository.delete(id);
   }
 }

@@ -1,17 +1,22 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
+import { IUserRepository } from '../../repositories/interfaces';
+import { USER_REPOSITORY } from '../../repositories/tokens';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   private readonly SALT_ROUNDS = 10;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     await this.checkUniqueConstraints(
@@ -24,31 +29,24 @@ export class UsersService {
       this.SALT_ROUNDS,
     );
 
-    const user = await this.prisma.user.create({
-      data: {
-        username: createUserDto.username,
-        email: createUserDto.email,
-        passwordHash,
-        profileImage: createUserDto.profileImage,
-        role: createUserDto.role,
-      },
+    const user = await this.userRepository.create({
+      username: createUserDto.username,
+      email: createUserDto.email,
+      passwordHash,
+      profileImage: createUserDto.profileImage,
+      role: createUserDto.role,
     });
 
     return this.excludePassword(user);
   }
 
   async findAll() {
-    const users = await this.prisma.user.findMany({
-      orderBy: { username: 'asc' },
-    });
-
+    const users = await this.userRepository.findAll();
     return users.map((user) => this.excludePassword(user));
   }
 
   async findOne(id: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-    });
+    const user = await this.userRepository.findOne(id);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -58,15 +56,11 @@ export class UsersService {
   }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-    });
+    return this.userRepository.findByEmail(email);
   }
 
   async findByUsername(username: string) {
-    return this.prisma.user.findUnique({
-      where: { username },
-    });
+    return this.userRepository.findByUsername(username);
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
@@ -80,7 +74,13 @@ export class UsersService {
       );
     }
 
-    const data: any = {
+    const data: {
+      username?: string;
+      email?: string;
+      passwordHash?: string;
+      profileImage?: string;
+      role?: any;
+    } = {
       username: updateUserDto.username,
       email: updateUserDto.email,
       profileImage: updateUserDto.profileImage,
@@ -94,20 +94,14 @@ export class UsersService {
       );
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data,
-    });
+    const user = await this.userRepository.update(id, data);
 
     return this.excludePassword(user);
   }
 
   async remove(id: number) {
     await this.findOne(id);
-
-    await this.prisma.user.delete({
-      where: { id },
-    });
+    await this.userRepository.delete(id);
   }
 
   private async checkUniqueConstraints(
@@ -116,12 +110,9 @@ export class UsersService {
     excludeId?: number,
   ) {
     if (username) {
-      const existingUsername = await this.prisma.user.findFirst({
-        where: {
-          username,
-          id: excludeId ? { not: excludeId } : undefined,
-        },
-      });
+      const existingUsername = excludeId
+        ? await this.userRepository.findByUsernameExcludingId(username, excludeId)
+        : await this.userRepository.findByUsername(username);
 
       if (existingUsername) {
         throw new ConflictException('Username already exists');
@@ -129,12 +120,9 @@ export class UsersService {
     }
 
     if (email) {
-      const existingEmail = await this.prisma.user.findFirst({
-        where: {
-          email,
-          id: excludeId ? { not: excludeId } : undefined,
-        },
-      });
+      const existingEmail = excludeId
+        ? await this.userRepository.findByEmailExcludingId(email, excludeId)
+        : await this.userRepository.findByEmail(email);
 
       if (existingEmail) {
         throw new ConflictException('Email already exists');

@@ -1,0 +1,3 @@
+export const BOOK_REPOSITORY = Symbol('BOOK_REPOSITORY');
+export const AUTHOR_REPOSITORY = Symbol('AUTHOR_REPOSITORY');
+export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
