@@ -111,7 +111,10 @@ export class UsersService {
   ) {
     if (username) {
       const existingUsername = excludeId
-        ? await this.userRepository.findByUsernameExcludingId(username, excludeId)
+        ? await this.userRepository.findByUsernameExcludingId(
+            username,
+            excludeId,
+          )
         : await this.userRepository.findByUsername(username);
 
       if (existingUsername) {
