@@ -1,6 +1,14 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { CreateBookDto, UpdateBookDto } from './dto';
-import { IBookRepository } from '../../repositories/interfaces';
+import {
+  CreateBookDto,
+  UpdateBookDto,
+  FindAllBooksFiltersDto,
+  BookSortBy,
+} from './dto';
+import {
+  IBookRepository,
+  FindAllBooksFilters,
+} from '../../repositories/interfaces';
 import { BOOK_REPOSITORY } from '../../repositories/tokens';
 
 @Injectable()
@@ -31,8 +39,30 @@ export class BooksService {
     });
   }
 
-  async findAll() {
-    return this.bookRepository.findAll();
+  async findAll(queryDto?: FindAllBooksFiltersDto) {
+    const filters: FindAllBooksFilters = {};
+
+    if (queryDto?.sortBy) {
+      filters.sortBy = queryDto.sortBy as BookSortBy;
+    }
+
+    if (queryDto?.sortOrder) {
+      filters.sortOrder = queryDto.sortOrder;
+    }
+
+    if (queryDto?.startDate) {
+      filters.startDate = new Date(queryDto.startDate);
+    }
+
+    if (queryDto?.endDate) {
+      filters.endDate = new Date(queryDto.endDate);
+    }
+
+    if (queryDto?.genreId) {
+      filters.genreId = queryDto.genreId;
+    }
+
+    return this.bookRepository.findAll(filters);
   }
 
   async findOne(id: number) {

@@ -1,5 +1,25 @@
 import { BookStatus, BookType } from '@prisma/client';
 
+export enum BookSortBy {
+  TITLE = 'title',
+  RATING = 'rating',
+  POPULARITY = 'popularity',
+  PUBLICATION_DATE = 'publicationDate',
+}
+
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
+export interface FindAllBooksFilters {
+  sortBy?: BookSortBy;
+  sortOrder?: SortOrder;
+  startDate?: Date;
+  endDate?: Date;
+  genreId?: number;
+}
+
 export interface BookAuthorInput {
   authorId: number;
   role?: string;
@@ -84,7 +104,7 @@ export interface BookWithRelations {
 
 export interface IBookRepository {
   create(data: CreateBookData): Promise<BookWithRelations>;
-  findAll(): Promise<BookWithRelations[]>;
+  findAll(filters?: FindAllBooksFilters): Promise<BookWithRelations[]>;
   findOne(id: number): Promise<BookWithRelations | null>;
   findByAuthor(authorId: number): Promise<BookWithRelations[]>;
   update(id: number, data: UpdateBookData): Promise<BookWithRelations>;

@@ -3,6 +3,8 @@ import {
   CreateBookData,
   UpdateBookData,
   BookWithRelations,
+  FindAllBooksFilters,
+  BookSortBy,
 } from '../interfaces';
 
 export class InMemoryBookRepository implements IBookRepository {
@@ -71,8 +73,52 @@ export class InMemoryBookRepository implements IBookRepository {
     return book;
   }
 
-  async findAll(): Promise<BookWithRelations[]> {
-    return [...this.books].sort((a, b) => a.title.localeCompare(b.title));
+  async findAll(filters?: FindAllBooksFilters): Promise<BookWithRelations[]> {
+    let result = [...this.books];
+
+    if (filters?.startDate) {
+      result = result.filter(
+        (book) =>
+          book.publicationDate && book.publicationDate >= filters.startDate!,
+      );
+    }
+
+    if (filters?.endDate) {
+      result = result.filter(
+        (book) =>
+          book.publicationDate && book.publicationDate <= filters.endDate!,
+      );
+    }
+
+    if (filters?.genreId) {
+      result = result.filter((book) =>
+        book.genres.some((g) => g.genreId === filters.genreId),
+      );
+    }
+
+    const sortOrder = filters?.sortOrder || 'asc';
+    const sortBy = filters?.sortBy || BookSortBy.TITLE;
+
+    switch (sortBy) {
+      case BookSortBy.TITLE:
+        result.sort((a, b) => {
+          const comparison = a.title.localeCompare(b.title);
+          return sortOrder === 'asc' ? comparison : -comparison;
+        });
+        break;
+      case BookSortBy.PUBLICATION_DATE:
+        result.sort((a, b) => {
+          const dateA = a.publicationDate?.getTime() ?? 0;
+          const dateB = b.publicationDate?.getTime() ?? 0;
+          const comparison = dateA - dateB;
+          return sortOrder === 'asc' ? comparison : -comparison;
+        });
+        break;
+      default:
+        result.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return result;
   }
 
   async findOne(id: number): Promise<BookWithRelations | null> {

@@ -9,9 +9,10 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { BooksService } from './books.service';
-import { CreateBookDto, UpdateBookDto } from './dto';
+import { CreateBookDto, UpdateBookDto, FindAllBooksFiltersDto } from './dto';
 
 @Controller('books')
 export class BooksController {
@@ -23,8 +24,8 @@ export class BooksController {
   }
 
   @Get()
-  findAll() {
-    return this.booksService.findAll();
+  findAll(@Query() query: FindAllBooksFiltersDto) {
+    return this.booksService.findAll(query);
   }
 
   @Get(':id')
