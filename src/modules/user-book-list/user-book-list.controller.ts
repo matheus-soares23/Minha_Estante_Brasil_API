@@ -7,10 +7,13 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { UserBookListService } from './user-book-list.service';
 import { CreateUserBookListDto, UpdateUserBookListDto } from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('user-book-list')
 export class UserBookListController {
   constructor(private readonly userBookListService: UserBookListService) {}
