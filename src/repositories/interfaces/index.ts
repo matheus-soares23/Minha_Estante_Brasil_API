@@ -5,3 +5,4 @@ export * from './genre.repository.interface';
 export * from './series.repository.interface';
 export * from './review.repository.interface';
 export * from './user-book-list.repository.interface';
+export * from './book-statistics-operation.enum';

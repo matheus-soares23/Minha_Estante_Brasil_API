@@ -1,4 +1,5 @@
 import { BookStatus, BookType } from '@prisma/client';
+import { BookStatisticsOperation } from './book-statistics-operation.enum';
 
 export enum BookSortBy {
   TITLE = 'title',
@@ -18,6 +19,7 @@ export interface FindAllBooksFilters {
   startDate?: Date;
   endDate?: Date;
   genreId?: number;
+  bookType?: BookType;
 }
 
 export interface BookAuthorInput {
@@ -111,4 +113,10 @@ export interface IBookRepository {
   delete(id: number): Promise<void>;
   deleteBookAuthors(bookId: number): Promise<void>;
   deleteBookGenres(bookId: number): Promise<void>;
+  updateBookStatistics(
+    bookId: number,
+    operation?: BookStatisticsOperation,
+    oldRating?: number,
+    newRating?: number,
+  ): Promise<void>;
 }

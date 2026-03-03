@@ -7,6 +7,7 @@ import {
   BookWithRelations,
   FindAllBooksFilters,
   BookSortBy,
+  BookStatisticsOperation,
 } from '../interfaces';
 
 @Injectable()
@@ -80,6 +81,10 @@ export class PrismaBookRepository implements IBookRepository {
       };
     }
 
+    if (filters?.bookType) {
+      where.type = filters.bookType;
+    }
+
     let orderBy: any = { title: 'asc' };
 
     if (filters?.sortBy) {
@@ -93,107 +98,32 @@ export class PrismaBookRepository implements IBookRepository {
           orderBy = { publicationDate: sortOrder };
           break;
         case BookSortBy.RATING:
-          const booksWithRating = await this.prisma.book.findMany({
-            where,
-            include: {
-              authors: {
-                include: {
-                  author: true,
-                },
-              },
-              genres: {
-                include: {
-                  genre: true,
-                },
-              },
-              reviews: {
-                select: {
-                  rating: true,
-                },
-              },
-            },
-          });
-
-          const booksWithAvgRating = booksWithRating.map((book) => {
-            const ratings = book.reviews
-              .map((r) => r.rating)
-              .filter((r): r is number => r !== null);
-            const avgRating =
-              ratings.length > 0
-                ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
-                : 0;
-            return { ...book, avgRating };
-          });
-
-          booksWithAvgRating.sort((a, b) => {
-            if (sortOrder === 'asc') {
-              return a.avgRating - b.avgRating;
-            }
-            return b.avgRating - a.avgRating;
-          });
-
-          return booksWithAvgRating.map(
-            ({ reviews: _reviews, avgRating: _avgRating, ...book }) => book,
-          );
-
+          orderBy = { statistics: { averageRating: sortOrder } };
+          break;
         case BookSortBy.POPULARITY:
-          const booksWithPopularity = await this.prisma.book.findMany({
-            where,
-            include: {
-              authors: {
-                include: {
-                  author: true,
-                },
-              },
-              genres: {
-                include: {
-                  genre: true,
-                },
-              },
-              userBookList: true,
-            },
-          });
-
-          booksWithPopularity.sort((a, b) => {
-            if (sortOrder === 'asc') {
-              return a.userBookList.length - b.userBookList.length;
-            }
-            return b.userBookList.length - a.userBookList.length;
-          });
-
-          return booksWithPopularity.map(
-            ({ userBookList: _userBookList, ...book }) => book,
-          );
-
+          orderBy = { statistics: { popularity: sortOrder } };
+          break;
         default:
           orderBy = { title: 'asc' };
       }
     }
 
-    if (
-      !filters?.sortBy ||
-      filters.sortBy === BookSortBy.TITLE ||
-      filters.sortBy === BookSortBy.PUBLICATION_DATE
-    ) {
-      return this.prisma.book.findMany({
-        where,
-        include: {
-          authors: {
-            include: {
-              author: true,
-            },
-          },
-          genres: {
-            include: {
-              genre: true,
-            },
+    return this.prisma.book.findMany({
+      where,
+      include: {
+        authors: {
+          include: {
+            author: true,
           },
         },
-        orderBy,
-      });
-    }
-
-    return [];
+        genres: {
+          include: {
+            genre: true,
+          },
+        },
+      },
+      orderBy,
+    });
   }
 
   async findOne(id: number): Promise<BookWithRelations | null> {
@@ -306,6 +236,150 @@ export class PrismaBookRepository implements IBookRepository {
   async deleteBookGenres(bookId: number): Promise<void> {
     await this.prisma.bookGenre.deleteMany({
       where: { bookId },
+    });
+  }
+
+  async updateBookStatistics(
+    bookId: number,
+    operation?: BookStatisticsOperation,
+    oldRating?: number,
+    newRating?: number,
+  ): Promise<void> {
+    if (!operation) {
+      const [popularity, reviewsData] = await Promise.all([
+        this.prisma.userBookList.count({
+          where: { bookId },
+        }),
+        this.prisma.review.aggregate({
+          where: { bookId, rating: { not: null } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+      ]);
+
+      await this.prisma.bookStatistics.upsert({
+        where: { bookId },
+        create: {
+          bookId,
+          popularity,
+          averageRating: reviewsData._avg.rating,
+          totalReviews: reviewsData._count.rating,
+        },
+        update: {
+          popularity,
+          averageRating: reviewsData._avg.rating,
+          totalReviews: reviewsData._count.rating,
+        },
+      });
+      return;
+    }
+
+    const currentStats = await this.prisma.bookStatistics.findUnique({
+      where: { bookId },
+    });
+
+    let newPopularity = currentStats?.popularity || 0;
+    let newAverageRating = currentStats?.averageRating || null;
+    let newTotalReviews = currentStats?.totalReviews || 0;
+
+    // Atualização incremental baseada na operação
+    switch (operation) {
+      case BookStatisticsOperation.ADD:
+        // Incrementa popularidade ao adicionar à lista
+        newPopularity += 1;
+
+        // Se tem rating, atualiza média incrementalmente
+        if (newRating !== undefined && newRating !== null) {
+          if (newTotalReviews === 0) {
+            newAverageRating = newRating;
+          } else {
+            // Fórmula: nova_média = (média_antiga * count + novo_rating) / (count + 1)
+            newAverageRating =
+              ((currentStats.averageRating || 0) * newTotalReviews +
+                newRating) /
+              (newTotalReviews + 1);
+          }
+          newTotalReviews += 1;
+        }
+        break;
+
+      case BookStatisticsOperation.REMOVE:
+        // Decrementa popularidade ao remover da lista
+        newPopularity = Math.max(0, newPopularity - 1);
+
+        // Se tinha rating, atualiza média incrementalmente
+        if (
+          oldRating !== undefined &&
+          oldRating !== null &&
+          newTotalReviews > 0
+        ) {
+          if (newTotalReviews === 1) {
+            newAverageRating = null;
+            newTotalReviews = 0;
+          } else {
+            // Fórmula: nova_média = (média_antiga * count - rating_removido) / (count - 1)
+            newAverageRating =
+              ((currentStats.averageRating || 0) * newTotalReviews -
+                oldRating) /
+              (newTotalReviews - 1);
+            newTotalReviews -= 1;
+          }
+        }
+        break;
+
+      case BookStatisticsOperation.UPDATE:
+        // Popularidade não muda
+        // Se o rating mudou, atualiza média incrementalmente
+        const hadOldRating = oldRating !== undefined && oldRating !== null;
+        const hasNewRating = newRating !== undefined && newRating !== null;
+
+        if (hadOldRating && !hasNewRating) {
+          // Removeu o rating
+          if (newTotalReviews === 1) {
+            newAverageRating = null;
+            newTotalReviews = 0;
+          } else {
+            newAverageRating =
+              ((currentStats.averageRating || 0) * newTotalReviews -
+                oldRating) /
+              (newTotalReviews - 1);
+            newTotalReviews -= 1;
+          }
+        } else if (!hadOldRating && hasNewRating) {
+          // Adicionou um rating
+          if (newTotalReviews === 0) {
+            newAverageRating = newRating;
+          } else {
+            newAverageRating =
+              ((currentStats.averageRating || 0) * newTotalReviews +
+                newRating) /
+              (newTotalReviews + 1);
+          }
+          newTotalReviews += 1;
+        } else if (hadOldRating && hasNewRating && oldRating !== newRating) {
+          // Mudou o rating. Nova_média = (média_antiga * count - rating_antigo + rating_novo) / count
+          newAverageRating =
+            ((currentStats.averageRating || 0) * newTotalReviews -
+              oldRating +
+              newRating) /
+            newTotalReviews;
+        }
+        break;
+    }
+
+    await this.prisma.bookStatistics.upsert({
+      where: { bookId },
+      create: {
+        bookId,
+        popularity: newPopularity,
+        averageRating: newAverageRating,
+        totalReviews: newTotalReviews,
+      },
+      update: {
+        popularity: newPopularity,
+        averageRating: newAverageRating,
+        totalReviews: newTotalReviews,
+      },
     });
   }
 }

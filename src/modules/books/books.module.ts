@@ -13,6 +13,6 @@ import { PrismaBookRepository } from '../../repositories/prisma';
       useClass: PrismaBookRepository,
     },
   ],
-  exports: [BooksService],
+  exports: [BooksService, BOOK_REPOSITORY],
 })
 export class BooksModule {}

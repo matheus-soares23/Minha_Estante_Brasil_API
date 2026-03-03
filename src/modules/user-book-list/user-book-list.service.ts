@@ -1,17 +1,26 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateUserBookListDto, UpdateUserBookListDto } from './dto';
-import { IUserBookListRepository } from '../../repositories/interfaces';
-import { USER_BOOK_LIST_REPOSITORY } from '../../repositories/tokens';
+import {
+  IUserBookListRepository,
+  IBookRepository,
+  BookStatisticsOperation,
+} from '../../repositories/interfaces';
+import {
+  USER_BOOK_LIST_REPOSITORY,
+  BOOK_REPOSITORY,
+} from '../../repositories/tokens';
 
 @Injectable()
 export class UserBookListService {
   constructor(
     @Inject(USER_BOOK_LIST_REPOSITORY)
     private readonly userBookListRepository: IUserBookListRepository,
+    @Inject(BOOK_REPOSITORY)
+    private readonly bookRepository: IBookRepository,
   ) {}
 
   async create(createUserBookListDto: CreateUserBookListDto) {
-    return this.userBookListRepository.create({
+    const userBookList = await this.userBookListRepository.create({
       userId: createUserBookListDto.userId,
       bookId: createUserBookListDto.bookId,
       status: createUserBookListDto.status,
@@ -25,6 +34,13 @@ export class UserBookListService {
         : undefined,
       notes: createUserBookListDto.notes,
     });
+
+    // UserBookList afeta apenas popularidade, não ratings (ratings vêm de Review)
+    await this.bookRepository.updateBookStatistics(
+      createUserBookListDto.bookId,
+      BookStatisticsOperation.ADD,
+    );
+    return userBookList;
   }
 
   async findAll() {
@@ -46,9 +62,7 @@ export class UserBookListService {
   }
 
   async update(id: number, updateUserBookListDto: UpdateUserBookListDto) {
-    await this.findOne(id);
-
-    return this.userBookListRepository.update(id, {
+    const updated = await this.userBookListRepository.update(id, {
       status: updateUserBookListDto.status,
       rating: updateUserBookListDto.rating,
       progress: updateUserBookListDto.progress,
@@ -60,10 +74,17 @@ export class UserBookListService {
         : undefined,
       notes: updateUserBookListDto.notes,
     });
+
+    return updated;
   }
 
   async remove(id: number) {
-    await this.findOne(id);
+    const userBookList = await this.findOne(id);
     await this.userBookListRepository.delete(id);
+    // UserBookList afeta apenas popularidade
+    await this.bookRepository.updateBookStatistics(
+      userBookList.bookId,
+      BookStatisticsOperation.REMOVE,
+    );
   }
 }

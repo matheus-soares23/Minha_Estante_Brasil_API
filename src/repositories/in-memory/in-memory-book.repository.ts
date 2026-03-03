@@ -5,6 +5,7 @@ import {
   BookWithRelations,
   FindAllBooksFilters,
   BookSortBy,
+  BookStatisticsOperation,
 } from '../interfaces';
 
 export class InMemoryBookRepository implements IBookRepository {
@@ -202,4 +203,11 @@ export class InMemoryBookRepository implements IBookRepository {
       book.genres = [];
     }
   }
+
+  async updateBookStatistics(
+    _bookId: number,
+    _operation?: BookStatisticsOperation,
+    _oldRating?: number,
+    _newRating?: number,
+  ): Promise<void> {}
 }

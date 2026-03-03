@@ -3,8 +3,10 @@ import { ReviewsService } from './reviews.service';
 import { ReviewsController } from './reviews.controller';
 import { PrismaReviewRepository } from '../../repositories/prisma/prisma-review.repository';
 import { REVIEW_REPOSITORY } from '../../repositories/tokens';
+import { BooksModule } from '../books/books.module';
 
 @Module({
+  imports: [BooksModule],
   controllers: [ReviewsController],
   providers: [
     ReviewsService,

@@ -1,23 +1,38 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateReviewDto, UpdateReviewDto } from './dto';
-import { IReviewRepository } from '../../repositories/interfaces';
-import { REVIEW_REPOSITORY } from '../../repositories/tokens';
+import {
+  IReviewRepository,
+  IBookRepository,
+  BookStatisticsOperation,
+} from '../../repositories/interfaces';
+import { REVIEW_REPOSITORY, BOOK_REPOSITORY } from '../../repositories/tokens';
 
 @Injectable()
 export class ReviewsService {
   constructor(
     @Inject(REVIEW_REPOSITORY)
     private readonly reviewRepository: IReviewRepository,
+    @Inject(BOOK_REPOSITORY)
+    private readonly bookRepository: IBookRepository,
   ) {}
 
   async create(createReviewDto: CreateReviewDto) {
-    return this.reviewRepository.create({
+    const review = await this.reviewRepository.create({
       userId: createReviewDto.userId,
       bookId: createReviewDto.bookId,
       rating: createReviewDto.rating,
       title: createReviewDto.title,
       content: createReviewDto.content,
     });
+
+    // Review afeta apenas ratings, não popularidade. Usa método incremental.
+    await this.bookRepository.updateBookStatistics(
+      createReviewDto.bookId,
+      BookStatisticsOperation.ADD,
+      undefined,
+      createReviewDto.rating,
+    );
+    return review;
   }
 
   async findAll() {
@@ -43,17 +58,32 @@ export class ReviewsService {
   }
 
   async update(id: number, updateReviewDto: UpdateReviewDto) {
-    await this.findOne(id);
+    const review = await this.findOne(id);
 
-    return this.reviewRepository.update(id, {
+    const updatedReview = await this.reviewRepository.update(id, {
       rating: updateReviewDto.rating,
       title: updateReviewDto.title,
       content: updateReviewDto.content,
     });
+
+    // Review: atualização incremental do rating
+    await this.bookRepository.updateBookStatistics(
+      review.bookId,
+      BookStatisticsOperation.UPDATE,
+      review.rating,
+      updateReviewDto.rating,
+    );
+    return updatedReview;
   }
 
   async remove(id: number) {
-    await this.findOne(id);
+    const review = await this.findOne(id);
     await this.reviewRepository.delete(id);
+    // Review: remoção incremental do rating
+    await this.bookRepository.updateBookStatistics(
+      review.bookId,
+      BookStatisticsOperation.REMOVE,
+      review.rating,
+    );
   }
 }

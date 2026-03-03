@@ -57,6 +57,7 @@ model Book {
   seriesBooks  SeriesBook[]
   userBookList UserBookList[]
   reviews      Review[]
+  statistics   BookStatistics?
 
   @@map("books")
 }
@@ -186,4 +187,16 @@ model Review {
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
+}
+
+model BookStatistics {
+  bookId        Int      @id @map("book_id")
+  popularity    Int      @default(0)
+  averageRating Float?   @map("average_rating")
+  totalReviews  Int      @default(0) @map("total_reviews")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@map("book_statistics")
 }

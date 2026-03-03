@@ -1,5 +1,6 @@
 import { IsOptional, IsEnum, IsDateString, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BookType } from '@prisma/client';
 
 export enum BookSortBy {
   TITLE = 'title',
@@ -35,4 +36,8 @@ export class FindAllBooksFiltersDto {
   @IsInt()
   @Min(1)
   genreId?: number;
+
+  @IsOptional()
+  @IsEnum(BookType)
+  bookType?: BookType;
 }
