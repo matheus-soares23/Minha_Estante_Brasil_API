@@ -10,7 +10,6 @@ export class InMemoryReviewRepository implements IReviewRepository {
   async create(data: {
     userId: number;
     bookId: number;
-    rating?: number;
     title?: string;
     content?: string;
   }): Promise<Review> {
@@ -18,7 +17,6 @@ export class InMemoryReviewRepository implements IReviewRepository {
       id: this.currentId++,
       userId: data.userId,
       bookId: data.bookId,
-      rating: data.rating || null,
       title: data.title || null,
       content: data.content || null,
       createdAt: new Date(),
@@ -54,7 +52,6 @@ export class InMemoryReviewRepository implements IReviewRepository {
   async update(
     id: number,
     data: {
-      rating?: number;
       title?: string;
       content?: string;
     },

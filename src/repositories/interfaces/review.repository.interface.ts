@@ -4,7 +4,6 @@ export interface IReviewRepository {
   create(data: {
     userId: number;
     bookId: number;
-    rating?: number;
     title?: string;
     content?: string;
   }): Promise<Review>;
@@ -20,7 +19,6 @@ export interface IReviewRepository {
   update(
     id: number,
     data: {
-      rating?: number;
       title?: string;
       content?: string;
     },

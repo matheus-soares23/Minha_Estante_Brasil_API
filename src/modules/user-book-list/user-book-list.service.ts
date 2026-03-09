@@ -35,10 +35,12 @@ export class UserBookListService {
       notes: createUserBookListDto.notes,
     });
 
-    // UserBookList afeta apenas popularidade, não ratings (ratings vêm de Review)
+    // UserBookList controla popularidade e rating das estatísticas do livro
     await this.bookRepository.updateBookStatistics(
       createUserBookListDto.bookId,
       BookStatisticsOperation.ADD,
+      undefined,
+      createUserBookListDto.rating,
     );
     return userBookList;
   }
@@ -62,6 +64,8 @@ export class UserBookListService {
   }
 
   async update(id: number, updateUserBookListDto: UpdateUserBookListDto) {
+    const userBookList = await this.findOne(id);
+
     const updated = await this.userBookListRepository.update(id, {
       status: updateUserBookListDto.status,
       rating: updateUserBookListDto.rating,
@@ -75,16 +79,27 @@ export class UserBookListService {
       notes: updateUserBookListDto.notes,
     });
 
+    // Atualizar estatísticas se o rating mudou
+    if (updateUserBookListDto.rating !== undefined) {
+      await this.bookRepository.updateBookStatistics(
+        userBookList.bookId,
+        BookStatisticsOperation.UPDATE,
+        userBookList.rating,
+        updateUserBookListDto.rating,
+      );
+    }
+
     return updated;
   }
 
   async remove(id: number) {
     const userBookList = await this.findOne(id);
     await this.userBookListRepository.delete(id);
-    // UserBookList afeta apenas popularidade
+    // UserBookList controla popularidade e rating
     await this.bookRepository.updateBookStatistics(
       userBookList.bookId,
       BookStatisticsOperation.REMOVE,
+      userBookList.rating,
     );
   }
 }

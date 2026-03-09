@@ -10,7 +10,6 @@ export class PrismaReviewRepository implements IReviewRepository {
   async create(data: {
     userId: number;
     bookId: number;
-    rating?: number;
     title?: string;
     content?: string;
   }): Promise<Review> {
@@ -48,7 +47,6 @@ export class PrismaReviewRepository implements IReviewRepository {
   async update(
     id: number,
     data: {
-      rating?: number;
       title?: string;
       content?: string;
     },

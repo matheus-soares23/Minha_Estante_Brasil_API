@@ -246,11 +246,12 @@ export class PrismaBookRepository implements IBookRepository {
     newRating?: number,
   ): Promise<void> {
     if (!operation) {
-      const [popularity, reviewsData] = await Promise.all([
+      // Recálculo completo: busca popularidade e ratings de UserBookList
+      const [popularity, ratingsData] = await Promise.all([
         this.prisma.userBookList.count({
           where: { bookId },
         }),
-        this.prisma.review.aggregate({
+        this.prisma.userBookList.aggregate({
           where: { bookId, rating: { not: null } },
           _avg: { rating: true },
           _count: { rating: true },
@@ -262,13 +263,13 @@ export class PrismaBookRepository implements IBookRepository {
         create: {
           bookId,
           popularity,
-          averageRating: reviewsData._avg.rating,
-          totalReviews: reviewsData._count.rating,
+          averageRating: ratingsData._avg.rating,
+          totalReviews: ratingsData._count.rating,
         },
         update: {
           popularity,
-          averageRating: reviewsData._avg.rating,
-          totalReviews: reviewsData._count.rating,
+          averageRating: ratingsData._avg.rating,
+          totalReviews: ratingsData._count.rating,
         },
       });
       return;
