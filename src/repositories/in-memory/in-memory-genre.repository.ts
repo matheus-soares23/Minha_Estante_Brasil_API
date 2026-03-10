@@ -53,7 +53,12 @@ export class InMemoryGenreRepository implements IGenreRepository {
 
     this.genres[index] = {
       ...this.genres[index],
-      ...data,
+      name: data.name !== undefined ? data.name : this.genres[index].name,
+      description:
+        data.description !== undefined
+          ? data.description
+          : this.genres[index].description,
+      slug: data.slug !== undefined ? data.slug : this.genres[index].slug,
       updatedAt: new Date(),
     };
 

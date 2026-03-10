@@ -64,7 +64,9 @@ export class InMemoryReviewRepository implements IReviewRepository {
 
     this.reviews[index] = {
       ...this.reviews[index],
-      ...data,
+      title: data.title !== undefined ? data.title : this.reviews[index].title,
+      content:
+        data.content !== undefined ? data.content : this.reviews[index].content,
       updatedAt: new Date(),
     };
 

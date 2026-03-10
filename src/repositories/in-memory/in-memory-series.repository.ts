@@ -53,7 +53,12 @@ export class InMemorySeriesRepository implements ISeriesRepository {
 
     this.series[index] = {
       ...this.series[index],
-      ...data,
+      name: data.name !== undefined ? data.name : this.series[index].name,
+      description:
+        data.description !== undefined
+          ? data.description
+          : this.series[index].description,
+      slug: data.slug !== undefined ? data.slug : this.series[index].slug,
       updatedAt: new Date(),
     };
 

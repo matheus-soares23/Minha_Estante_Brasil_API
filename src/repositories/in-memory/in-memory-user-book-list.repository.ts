@@ -80,7 +80,28 @@ export class InMemoryUserBookListRepository implements IUserBookListRepository {
 
     this.userBookLists[index] = {
       ...this.userBookLists[index],
-      ...data,
+      status:
+        data.status !== undefined
+          ? data.status
+          : this.userBookLists[index].status,
+      rating:
+        data.rating !== undefined
+          ? data.rating
+          : this.userBookLists[index].rating,
+      progress:
+        data.progress !== undefined
+          ? data.progress
+          : this.userBookLists[index].progress,
+      startDate:
+        data.startDate !== undefined
+          ? data.startDate
+          : this.userBookLists[index].startDate,
+      finishDate:
+        data.finishDate !== undefined
+          ? data.finishDate
+          : this.userBookLists[index].finishDate,
+      notes:
+        data.notes !== undefined ? data.notes : this.userBookLists[index].notes,
       updatedAt: new Date(),
     };
 
