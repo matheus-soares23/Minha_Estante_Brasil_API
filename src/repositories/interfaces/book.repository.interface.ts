@@ -124,8 +124,6 @@ export interface IBookRepository {
   delete(id: number): Promise<void>;
   deleteBookAuthors(bookId: number): Promise<void>;
   deleteBookGenres(bookId: number): Promise<void>;
-  
-  // Métodos para estatísticas (sem lógica de negócio)
   getBookStatistics(bookId: number): Promise<BookStatistics | null>;
   upsertBookStatistics(data: BookStatistics): Promise<void>;
   countUserBookListByBook(bookId: number): Promise<number>;
