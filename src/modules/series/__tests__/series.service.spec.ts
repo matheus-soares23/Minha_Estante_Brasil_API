@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { SeriesService } from './series.service';
-import { InMemorySeriesRepository } from '../../repositories/in-memory';
-import { SERIES_REPOSITORY } from '../../repositories/tokens';
+import { SeriesService } from '../series.service';
+import { InMemorySeriesRepository } from '../../../repositories/in-memory';
+import { SERIES_REPOSITORY } from '../../../repositories/tokens';
 
 describe('SeriesService', () => {
   let service: SeriesService;

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { AuthorsService } from './authors.service';
-import { InMemoryAuthorRepository } from '../../repositories/in-memory';
-import { AUTHOR_REPOSITORY } from '../../repositories/tokens';
+import { AuthorsService } from '../authors.service';
+import { InMemoryAuthorRepository } from '../../../repositories/in-memory';
+import { AUTHOR_REPOSITORY } from '../../../repositories/tokens';
 
 describe('AuthorsService', () => {
   let service: AuthorsService;
@@ -142,9 +142,9 @@ describe('AuthorsService', () => {
     });
 
     it('should throw NotFoundException when updating non-existent author', async () => {
-      await expect(
-        service.update(999, { name: 'Test' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update only specified fields', async () => {

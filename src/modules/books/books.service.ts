@@ -114,4 +114,137 @@ export class BooksService {
     await this.findOne(id);
     await this.bookRepository.delete(id);
   }
+
+  // Método para recalcular popularidade e rating, ainda não usado no fluxo
+  async recalculateBookStatistics(bookId: number): Promise<void> {
+    const [popularity, ratingsData] = await Promise.all([
+      this.bookRepository.countUserBookListByBook(bookId),
+      this.bookRepository.aggregateRatingsByBook(bookId),
+    ]);
+
+    await this.bookRepository.upsertBookStatistics({
+      bookId,
+      popularity,
+      averageRating: ratingsData.averageRating,
+      totalReviews: ratingsData.totalReviews,
+    });
+  }
+
+  async handleUserBookListAdded(
+    bookId: number,
+    rating?: number,
+  ): Promise<void> {
+    const currentStats = await this.bookRepository.getBookStatistics(bookId);
+
+    const newPopularity = (currentStats?.popularity || 0) + 1;
+    let newAverageRating = currentStats?.averageRating || null;
+    let newTotalReviews = currentStats?.totalReviews || 0;
+
+    // Se tem rating, atualiza média incrementalmente
+    if (rating !== undefined && rating !== null) {
+      if (newTotalReviews === 0) {
+        newAverageRating = rating;
+      } else {
+        // Fórmula: nova_média = (média_antiga * count + novo_rating) / (count + 1)
+        newAverageRating =
+          ((currentStats?.averageRating || 0) * newTotalReviews + rating) /
+          (newTotalReviews + 1);
+      }
+      newTotalReviews += 1;
+    }
+
+    await this.bookRepository.upsertBookStatistics({
+      bookId,
+      popularity: newPopularity,
+      averageRating: newAverageRating,
+      totalReviews: newTotalReviews,
+    });
+  }
+
+  async handleUserBookListRemoved(
+    bookId: number,
+    rating?: number,
+  ): Promise<void> {
+    const currentStats = await this.bookRepository.getBookStatistics(bookId);
+    if (!currentStats) return;
+
+    const newPopularity = Math.max(0, currentStats.popularity - 1);
+    let newAverageRating = currentStats.averageRating;
+    let newTotalReviews = currentStats.totalReviews;
+
+    // Se tinha rating, atualiza média incrementalmente
+    if (rating !== undefined && rating !== null && newTotalReviews > 0) {
+      if (newTotalReviews === 1) {
+        newAverageRating = null;
+        newTotalReviews = 0;
+      } else {
+        // Fórmula: nova_média = (média_antiga * count - rating_removido) / (count - 1)
+        newAverageRating =
+          ((currentStats.averageRating || 0) * newTotalReviews - rating) /
+          (newTotalReviews - 1);
+        newTotalReviews -= 1;
+      }
+    }
+
+    await this.bookRepository.upsertBookStatistics({
+      bookId,
+      popularity: newPopularity,
+      averageRating: newAverageRating,
+      totalReviews: newTotalReviews,
+    });
+  }
+
+  async handleUserBookListUpdated(
+    bookId: number,
+    oldRating?: number,
+    newRating?: number,
+  ): Promise<void> {
+    const currentStats = await this.bookRepository.getBookStatistics(bookId);
+    if (!currentStats) return;
+
+    // Popularidade não muda
+    const newPopularity = currentStats.popularity;
+    let newAverageRating = currentStats.averageRating;
+    let newTotalReviews = currentStats.totalReviews;
+
+    const hadOldRating = oldRating !== undefined && oldRating !== null;
+    const hasNewRating = newRating !== undefined && newRating !== null;
+
+    if (hadOldRating && !hasNewRating) {
+      // Removeu o rating
+      if (newTotalReviews === 1) {
+        newAverageRating = null;
+        newTotalReviews = 0;
+      } else {
+        newAverageRating =
+          ((currentStats.averageRating || 0) * newTotalReviews - oldRating) /
+          (newTotalReviews - 1);
+        newTotalReviews -= 1;
+      }
+    } else if (!hadOldRating && hasNewRating) {
+      // Adicionou um rating
+      if (newTotalReviews === 0) {
+        newAverageRating = newRating;
+      } else {
+        newAverageRating =
+          ((currentStats.averageRating || 0) * newTotalReviews + newRating) /
+          (newTotalReviews + 1);
+      }
+      newTotalReviews += 1;
+    } else if (hadOldRating && hasNewRating && oldRating !== newRating) {
+      // Mudou o rating. Nova_média = (média_antiga * count - rating_antigo + rating_novo) / count
+      newAverageRating =
+        ((currentStats.averageRating || 0) * newTotalReviews -
+          oldRating +
+          newRating) /
+        newTotalReviews;
+    }
+
+    await this.bookRepository.upsertBookStatistics({
+      bookId,
+      popularity: newPopularity,
+      averageRating: newAverageRating,
+      totalReviews: newTotalReviews,
+    });
+  }
 }

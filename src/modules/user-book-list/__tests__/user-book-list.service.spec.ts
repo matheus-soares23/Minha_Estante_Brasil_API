@@ -1,21 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { UserBookListService } from './user-book-list.service';
-import {
-  InMemoryUserBookListRepository,
-  InMemoryBookRepository,
-} from '../../repositories/in-memory';
-import {
-  USER_BOOK_LIST_REPOSITORY,
-  BOOK_REPOSITORY,
-} from '../../repositories/tokens';
+import { UserBookListService } from '../user-book-list.service';
+import { InMemoryUserBookListRepository } from '../../../repositories/in-memory';
+import { USER_BOOK_LIST_REPOSITORY } from '../../../repositories/tokens';
 import { ListStatus } from '@prisma/client';
-import { BookStatisticsOperation } from '../../repositories/interfaces';
+import { BooksService } from '../../books/books.service';
 
 describe('UserBookListService', () => {
   let service: UserBookListService;
   let userBookListRepository: InMemoryUserBookListRepository;
-  let bookRepository: InMemoryBookRepository;
+  let booksService: BooksService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,8 +20,12 @@ describe('UserBookListService', () => {
           useClass: InMemoryUserBookListRepository,
         },
         {
-          provide: BOOK_REPOSITORY,
-          useClass: InMemoryBookRepository,
+          provide: BooksService,
+          useValue: {
+            handleUserBookListAdded: jest.fn(),
+            handleUserBookListUpdated: jest.fn(),
+            handleUserBookListRemoved: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -36,13 +34,13 @@ describe('UserBookListService', () => {
     userBookListRepository = module.get<InMemoryUserBookListRepository>(
       USER_BOOK_LIST_REPOSITORY,
     );
-    bookRepository = module.get<InMemoryBookRepository>(BOOK_REPOSITORY);
+    booksService = module.get<BooksService>(BooksService);
   });
 
   afterEach(() => {
     userBookListRepository['userBookLists'] = [];
     userBookListRepository['currentId'] = 1;
-    bookRepository.clear();
+    jest.clearAllMocks();
   });
 
   describe('create', () => {
@@ -83,9 +81,7 @@ describe('UserBookListService', () => {
       expect(result.notes).toBeNull();
     });
 
-    it('should call updateBookStatistics when creating with rating', async () => {
-      const updateStatsSpy = jest.spyOn(bookRepository, 'updateBookStatistics');
-
+    it('should call handleUserBookListAdded when creating with rating', async () => {
       const createDto = {
         userId: 1,
         bookId: 1,
@@ -94,12 +90,7 @@ describe('UserBookListService', () => {
 
       await service.create(createDto);
 
-      expect(updateStatsSpy).toHaveBeenCalledWith(
-        1,
-        BookStatisticsOperation.ADD,
-        undefined,
-        4,
-      );
+      expect(booksService.handleUserBookListAdded).toHaveBeenCalledWith(1, 4);
     });
 
     it('should convert date strings to Date objects', async () => {
@@ -206,38 +197,36 @@ describe('UserBookListService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should call updateBookStatistics when rating changes', async () => {
+    it('should call handleUserBookListUpdated when rating changes', async () => {
       const entry = await service.create({
         userId: 1,
         bookId: 1,
         rating: 3,
       });
 
-      const updateStatsSpy = jest.spyOn(bookRepository, 'updateBookStatistics');
+      jest.clearAllMocks();
 
       await service.update(entry.id, { rating: 5 });
 
-      expect(updateStatsSpy).toHaveBeenCalledWith(
+      expect(booksService.handleUserBookListUpdated).toHaveBeenCalledWith(
         1,
-        BookStatisticsOperation.UPDATE,
         3,
         5,
       );
     });
 
-    it('should not call updateBookStatistics when rating is not updated', async () => {
+    it('should not call handleUserBookListUpdated when rating is not updated', async () => {
       const entry = await service.create({
         userId: 1,
         bookId: 1,
         status: ListStatus.reading,
       });
 
-      const updateStatsSpy = jest.spyOn(bookRepository, 'updateBookStatistics');
-      updateStatsSpy.mockClear();
+      jest.clearAllMocks();
 
       await service.update(entry.id, { status: ListStatus.completed });
 
-      expect(updateStatsSpy).not.toHaveBeenCalled();
+      expect(booksService.handleUserBookListUpdated).not.toHaveBeenCalled();
     });
 
     it('should update only specified fields', async () => {
@@ -269,15 +258,9 @@ describe('UserBookListService', () => {
         rating: 4,
       });
 
-      const updateStatsSpy = jest.spyOn(bookRepository, 'updateBookStatistics');
-
       await service.remove(entry.id);
 
-      expect(updateStatsSpy).toHaveBeenCalledWith(
-        1,
-        BookStatisticsOperation.REMOVE,
-        4,
-      );
+      expect(booksService.handleUserBookListRemoved).toHaveBeenCalledWith(1, 4);
 
       await expect(service.findOne(entry.id)).rejects.toThrow(
         NotFoundException,
@@ -288,19 +271,16 @@ describe('UserBookListService', () => {
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
 
-    it('should call updateBookStatistics even without rating', async () => {
+    it('should call handleUserBookListRemoved even without rating', async () => {
       const entry = await service.create({
         userId: 1,
         bookId: 1,
       });
 
-      const updateStatsSpy = jest.spyOn(bookRepository, 'updateBookStatistics');
-
       await service.remove(entry.id);
 
-      expect(updateStatsSpy).toHaveBeenCalledWith(
+      expect(booksService.handleUserBookListRemoved).toHaveBeenCalledWith(
         1,
-        BookStatisticsOperation.REMOVE,
         null,
       );
     });

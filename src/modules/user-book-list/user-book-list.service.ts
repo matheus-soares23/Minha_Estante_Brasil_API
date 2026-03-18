@@ -1,22 +1,15 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateUserBookListDto, UpdateUserBookListDto } from './dto';
-import {
-  IUserBookListRepository,
-  IBookRepository,
-  BookStatisticsOperation,
-} from '../../repositories/interfaces';
-import {
-  USER_BOOK_LIST_REPOSITORY,
-  BOOK_REPOSITORY,
-} from '../../repositories/tokens';
+import { IUserBookListRepository } from '../../repositories/interfaces';
+import { USER_BOOK_LIST_REPOSITORY } from '../../repositories/tokens';
+import { BooksService } from '../books/books.service';
 
 @Injectable()
 export class UserBookListService {
   constructor(
     @Inject(USER_BOOK_LIST_REPOSITORY)
     private readonly userBookListRepository: IUserBookListRepository,
-    @Inject(BOOK_REPOSITORY)
-    private readonly bookRepository: IBookRepository,
+    private readonly booksService: BooksService,
   ) {}
 
   async create(createUserBookListDto: CreateUserBookListDto) {
@@ -36,10 +29,8 @@ export class UserBookListService {
     });
 
     // UserBookList controla popularidade e rating das estatísticas do livro
-    await this.bookRepository.updateBookStatistics(
+    await this.booksService.handleUserBookListAdded(
       createUserBookListDto.bookId,
-      BookStatisticsOperation.ADD,
-      undefined,
       createUserBookListDto.rating,
     );
     return userBookList;
@@ -81,9 +72,8 @@ export class UserBookListService {
 
     // Atualizar estatísticas se o rating mudou
     if (updateUserBookListDto.rating !== undefined) {
-      await this.bookRepository.updateBookStatistics(
+      await this.booksService.handleUserBookListUpdated(
         userBookList.bookId,
-        BookStatisticsOperation.UPDATE,
         userBookList.rating,
         updateUserBookListDto.rating,
       );
@@ -96,9 +86,8 @@ export class UserBookListService {
     const userBookList = await this.findOne(id);
     await this.userBookListRepository.delete(id);
     // UserBookList controla popularidade e rating
-    await this.bookRepository.updateBookStatistics(
+    await this.booksService.handleUserBookListRemoved(
       userBookList.bookId,
-      BookStatisticsOperation.REMOVE,
       userBookList.rating,
     );
   }

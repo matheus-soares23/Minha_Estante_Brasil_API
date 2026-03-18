@@ -7,7 +7,8 @@ import {
   BookWithRelations,
   FindAllBooksFilters,
   BookSortBy,
-  BookStatisticsOperation,
+  BookStatistics,
+  BookRatingAggregation,
 } from '../interfaces';
 
 @Injectable()
@@ -239,148 +240,45 @@ export class PrismaBookRepository implements IBookRepository {
     });
   }
 
-  async updateBookStatistics(
-    bookId: number,
-    operation?: BookStatisticsOperation,
-    oldRating?: number,
-    newRating?: number,
-  ): Promise<void> {
-    if (!operation) {
-      // Recálculo completo: busca popularidade e ratings de UserBookList
-      const [popularity, ratingsData] = await Promise.all([
-        this.prisma.userBookList.count({
-          where: { bookId },
-        }),
-        this.prisma.userBookList.aggregate({
-          where: { bookId, rating: { not: null } },
-          _avg: { rating: true },
-          _count: { rating: true },
-        }),
-      ]);
-
-      await this.prisma.bookStatistics.upsert({
-        where: { bookId },
-        create: {
-          bookId,
-          popularity,
-          averageRating: ratingsData._avg.rating,
-          totalReviews: ratingsData._count.rating,
-        },
-        update: {
-          popularity,
-          averageRating: ratingsData._avg.rating,
-          totalReviews: ratingsData._count.rating,
-        },
-      });
-      return;
-    }
-
-    const currentStats = await this.prisma.bookStatistics.findUnique({
+  async getBookStatistics(bookId: number): Promise<BookStatistics | null> {
+    return this.prisma.bookStatistics.findUnique({
       where: { bookId },
     });
+  }
 
-    let newPopularity = currentStats?.popularity || 0;
-    let newAverageRating = currentStats?.averageRating || null;
-    let newTotalReviews = currentStats?.totalReviews || 0;
-
-    // Atualização incremental baseada na operação
-    switch (operation) {
-      case BookStatisticsOperation.ADD:
-        // Incrementa popularidade ao adicionar à lista
-        newPopularity += 1;
-
-        // Se tem rating, atualiza média incrementalmente
-        if (newRating !== undefined && newRating !== null) {
-          if (newTotalReviews === 0) {
-            newAverageRating = newRating;
-          } else {
-            // Fórmula: nova_média = (média_antiga * count + novo_rating) / (count + 1)
-            newAverageRating =
-              ((currentStats.averageRating || 0) * newTotalReviews +
-                newRating) /
-              (newTotalReviews + 1);
-          }
-          newTotalReviews += 1;
-        }
-        break;
-
-      case BookStatisticsOperation.REMOVE:
-        // Decrementa popularidade ao remover da lista
-        newPopularity = Math.max(0, newPopularity - 1);
-
-        // Se tinha rating, atualiza média incrementalmente
-        if (
-          oldRating !== undefined &&
-          oldRating !== null &&
-          newTotalReviews > 0
-        ) {
-          if (newTotalReviews === 1) {
-            newAverageRating = null;
-            newTotalReviews = 0;
-          } else {
-            // Fórmula: nova_média = (média_antiga * count - rating_removido) / (count - 1)
-            newAverageRating =
-              ((currentStats.averageRating || 0) * newTotalReviews -
-                oldRating) /
-              (newTotalReviews - 1);
-            newTotalReviews -= 1;
-          }
-        }
-        break;
-
-      case BookStatisticsOperation.UPDATE:
-        // Popularidade não muda
-        // Se o rating mudou, atualiza média incrementalmente
-        const hadOldRating = oldRating !== undefined && oldRating !== null;
-        const hasNewRating = newRating !== undefined && newRating !== null;
-
-        if (hadOldRating && !hasNewRating) {
-          // Removeu o rating
-          if (newTotalReviews === 1) {
-            newAverageRating = null;
-            newTotalReviews = 0;
-          } else {
-            newAverageRating =
-              ((currentStats.averageRating || 0) * newTotalReviews -
-                oldRating) /
-              (newTotalReviews - 1);
-            newTotalReviews -= 1;
-          }
-        } else if (!hadOldRating && hasNewRating) {
-          // Adicionou um rating
-          if (newTotalReviews === 0) {
-            newAverageRating = newRating;
-          } else {
-            newAverageRating =
-              ((currentStats.averageRating || 0) * newTotalReviews +
-                newRating) /
-              (newTotalReviews + 1);
-          }
-          newTotalReviews += 1;
-        } else if (hadOldRating && hasNewRating && oldRating !== newRating) {
-          // Mudou o rating. Nova_média = (média_antiga * count - rating_antigo + rating_novo) / count
-          newAverageRating =
-            ((currentStats.averageRating || 0) * newTotalReviews -
-              oldRating +
-              newRating) /
-            newTotalReviews;
-        }
-        break;
-    }
-
+  async upsertBookStatistics(data: BookStatistics): Promise<void> {
     await this.prisma.bookStatistics.upsert({
-      where: { bookId },
+      where: { bookId: data.bookId },
       create: {
-        bookId,
-        popularity: newPopularity,
-        averageRating: newAverageRating,
-        totalReviews: newTotalReviews,
+        bookId: data.bookId,
+        popularity: data.popularity,
+        averageRating: data.averageRating,
+        totalReviews: data.totalReviews,
       },
       update: {
-        popularity: newPopularity,
-        averageRating: newAverageRating,
-        totalReviews: newTotalReviews,
+        popularity: data.popularity,
+        averageRating: data.averageRating,
+        totalReviews: data.totalReviews,
       },
     });
+  }
+
+  async countUserBookListByBook(bookId: number): Promise<number> {
+    return this.prisma.userBookList.count({
+      where: { bookId },
+    });
+  }
+
+  async aggregateRatingsByBook(bookId: number): Promise<BookRatingAggregation> {
+    const result = await this.prisma.userBookList.aggregate({
+      where: { bookId, rating: { not: null } },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
+    return {
+      averageRating: result._avg.rating,
+      totalReviews: result._count.rating,
+    };
   }
 }

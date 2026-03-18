@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { BooksService } from './books.service';
-import { InMemoryBookRepository } from '../../repositories/in-memory';
-import { BOOK_REPOSITORY } from '../../repositories/tokens';
-import { BookSortBy, SortOrder } from './dto';
+import { BooksService } from '../books.service';
+import { InMemoryBookRepository } from '../../../repositories/in-memory';
+import { BOOK_REPOSITORY } from '../../../repositories/tokens';
+import { BookSortBy, SortOrder } from '../dto';
 
 describe('BooksService', () => {
   let service: BooksService;
@@ -289,6 +289,159 @@ describe('BooksService', () => {
 
     it('should throw NotFoundException when removing non-existent book', async () => {
       await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('recalculateBookStatistics', () => {
+    it('should recalculate book statistics from UserBookList data', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      repository.addUserBookListForTest(book.id, 5);
+      repository.addUserBookListForTest(book.id, 4);
+      repository.addUserBookListForTest(book.id, null);
+
+      await service.recalculateBookStatistics(book.id);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats).toBeDefined();
+      expect(stats?.popularity).toBe(3);
+      expect(stats?.averageRating).toBe(4.5);
+      expect(stats?.totalReviews).toBe(2);
+    });
+
+    it('should handle book with no ratings', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      repository.addUserBookListForTest(book.id, null);
+      repository.addUserBookListForTest(book.id, null);
+
+      await service.recalculateBookStatistics(book.id);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(2);
+      expect(stats?.averageRating).toBeNull();
+      expect(stats?.totalReviews).toBe(0);
+    });
+  });
+
+  describe('handleUserBookListAdded', () => {
+    it('should increment popularity when adding without rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(1);
+      expect(stats?.averageRating).toBeNull();
+      expect(stats?.totalReviews).toBe(0);
+    });
+
+    it('should update statistics when adding with rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(1);
+      expect(stats?.averageRating).toBe(5);
+      expect(stats?.totalReviews).toBe(1);
+    });
+
+    it('should calculate correct average when adding multiple ratings', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListAdded(book.id, 3);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(2);
+      expect(stats?.averageRating).toBe(4);
+      expect(stats?.totalReviews).toBe(2);
+    });
+  });
+
+  describe('handleUserBookListRemoved', () => {
+    it('should decrement popularity when removing without rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id);
+      await service.handleUserBookListAdded(book.id);
+      await service.handleUserBookListRemoved(book.id);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(1);
+    });
+
+    it('should update statistics when removing with rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListAdded(book.id, 3);
+      await service.handleUserBookListRemoved(book.id, 5);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(1);
+      expect(stats?.averageRating).toBe(3);
+      expect(stats?.totalReviews).toBe(1);
+    });
+
+    it('should set average to null when removing last rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListRemoved(book.id, 5);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(0);
+      expect(stats?.averageRating).toBeNull();
+      expect(stats?.totalReviews).toBe(0);
+    });
+  });
+
+  describe('handleUserBookListUpdated', () => {
+    it('should not change popularity when updating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListUpdated(book.id, 5, 4);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.popularity).toBe(1);
+    });
+
+    it('should update average when changing rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListAdded(book.id, 3);
+      await service.handleUserBookListUpdated(book.id, 5, 1);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.averageRating).toBe(2);
+      expect(stats?.totalReviews).toBe(2);
+    });
+
+    it('should handle adding rating when there was none', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id);
+      await service.handleUserBookListUpdated(book.id, undefined, 5);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.averageRating).toBe(5);
+      expect(stats?.totalReviews).toBe(1);
+    });
+
+    it('should handle removing rating', async () => {
+      const book = await service.create({ title: 'Test Book' });
+
+      await service.handleUserBookListAdded(book.id, 5);
+      await service.handleUserBookListAdded(book.id, 3);
+      await service.handleUserBookListUpdated(book.id, 5, undefined);
+
+      const stats = await repository.getBookStatistics(book.id);
+      expect(stats?.averageRating).toBe(3);
+      expect(stats?.totalReviews).toBe(1);
     });
   });
 });

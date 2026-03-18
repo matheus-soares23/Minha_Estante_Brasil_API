@@ -5,11 +5,14 @@ import {
   BookWithRelations,
   FindAllBooksFilters,
   BookSortBy,
-  BookStatisticsOperation,
+  BookStatistics,
+  BookRatingAggregation,
 } from '../interfaces';
 
 export class InMemoryBookRepository implements IBookRepository {
   private books: BookWithRelations[] = [];
+  private bookStatistics: Map<number, BookStatistics> = new Map();
+  private userBookLists: Array<{ bookId: number; rating: number | null }> = [];
   private currentId = 1;
 
   // Método auxiliar para acessar os dados internos nos testes
@@ -20,6 +23,8 @@ export class InMemoryBookRepository implements IBookRepository {
   // Método auxiliar para limpar os dados entre testes
   clear(): void {
     this.books = [];
+    this.bookStatistics.clear();
+    this.userBookLists = [];
     this.currentId = 1;
   }
 
@@ -204,10 +209,46 @@ export class InMemoryBookRepository implements IBookRepository {
     }
   }
 
-  async updateBookStatistics(
-    _bookId: number,
-    _operation?: BookStatisticsOperation,
-    _oldRating?: number,
-    _newRating?: number,
-  ): Promise<void> {}
+  async getBookStatistics(bookId: number): Promise<BookStatistics | null> {
+    return this.bookStatistics.get(bookId) || null;
+  }
+
+  async upsertBookStatistics(data: BookStatistics): Promise<void> {
+    this.bookStatistics.set(data.bookId, data);
+  }
+
+  async countUserBookListByBook(bookId: number): Promise<number> {
+    return this.userBookLists.filter((ubl) => ubl.bookId === bookId).length;
+  }
+
+  async aggregateRatingsByBook(
+    bookId: number,
+  ): Promise<BookRatingAggregation> {
+    const ratings = this.userBookLists
+      .filter((ubl) => ubl.bookId === bookId && ubl.rating !== null)
+      .map((ubl) => ubl.rating!);
+
+    if (ratings.length === 0) {
+      return { averageRating: null, totalReviews: 0 };
+    }
+
+    const sum = ratings.reduce((acc, rating) => acc + rating, 0);
+    const averageRating = sum / ratings.length;
+
+    return { averageRating, totalReviews: ratings.length };
+  }
+
+  // Métodos auxiliares para testes simularem UserBookList
+  addUserBookListForTest(bookId: number, rating: number | null = null): void {
+    this.userBookLists.push({ bookId, rating });
+  }
+
+  removeUserBookListForTest(bookId: number, rating: number | null = null): void {
+    const index = this.userBookLists.findIndex(
+      (ubl) => ubl.bookId === bookId && ubl.rating === rating,
+    );
+    if (index !== -1) {
+      this.userBookLists.splice(index, 1);
+    }
+  }
 }

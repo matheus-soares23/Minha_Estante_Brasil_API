@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
-import { InMemoryUserRepository } from '../../repositories/in-memory';
-import { USER_REPOSITORY } from '../../repositories/tokens';
+import { AuthService } from '../auth.service';
+import { UsersService } from '../../users/users.service';
+import { InMemoryUserRepository } from '../../../repositories/in-memory';
+import { USER_REPOSITORY } from '../../../repositories/tokens';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {

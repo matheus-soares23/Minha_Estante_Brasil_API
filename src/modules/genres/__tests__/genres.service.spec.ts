@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { GenresService } from './genres.service';
-import { InMemoryGenreRepository } from '../../repositories/in-memory';
-import { GENRE_REPOSITORY } from '../../repositories/tokens';
+import { GenresService } from '../genres.service';
+import { InMemoryGenreRepository } from '../../../repositories/in-memory';
+import { GENRE_REPOSITORY } from '../../../repositories/tokens';
 
 describe('GenresService', () => {
   let service: GenresService;

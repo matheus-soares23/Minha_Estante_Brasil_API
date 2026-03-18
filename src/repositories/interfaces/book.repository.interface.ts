@@ -1,5 +1,4 @@
 import { BookStatus, BookType } from '@prisma/client';
-import { BookStatisticsOperation } from './book-statistics-operation.enum';
 
 export enum BookSortBy {
   TITLE = 'title',
@@ -104,6 +103,18 @@ export interface BookWithRelations {
   }[];
 }
 
+export interface BookStatistics {
+  bookId: number;
+  popularity: number;
+  averageRating: number | null;
+  totalReviews: number;
+}
+
+export interface BookRatingAggregation {
+  averageRating: number | null;
+  totalReviews: number;
+}
+
 export interface IBookRepository {
   create(data: CreateBookData): Promise<BookWithRelations>;
   findAll(filters?: FindAllBooksFilters): Promise<BookWithRelations[]>;
@@ -113,10 +124,10 @@ export interface IBookRepository {
   delete(id: number): Promise<void>;
   deleteBookAuthors(bookId: number): Promise<void>;
   deleteBookGenres(bookId: number): Promise<void>;
-  updateBookStatistics(
-    bookId: number,
-    operation?: BookStatisticsOperation,
-    oldRating?: number,
-    newRating?: number,
-  ): Promise<void>;
+  
+  // Métodos para estatísticas (sem lógica de negócio)
+  getBookStatistics(bookId: number): Promise<BookStatistics | null>;
+  upsertBookStatistics(data: BookStatistics): Promise<void>;
+  countUserBookListByBook(bookId: number): Promise<number>;
+  aggregateRatingsByBook(bookId: number): Promise<BookRatingAggregation>;
 }

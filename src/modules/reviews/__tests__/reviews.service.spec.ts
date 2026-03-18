@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { ReviewsService } from './reviews.service';
-import { InMemoryReviewRepository } from '../../repositories/in-memory';
-import { REVIEW_REPOSITORY } from '../../repositories/tokens';
+import { ReviewsService } from '../reviews.service';
+import { InMemoryReviewRepository } from '../../../repositories/in-memory';
+import { REVIEW_REPOSITORY } from '../../../repositories/tokens';
 
 describe('ReviewsService', () => {
   let service: ReviewsService;

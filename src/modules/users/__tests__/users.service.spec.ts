@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { InMemoryUserRepository } from '../../repositories/in-memory';
-import { USER_REPOSITORY } from '../../repositories/tokens';
+import { UsersService } from '../users.service';
+import { InMemoryUserRepository } from '../../../repositories/in-memory';
+import { USER_REPOSITORY } from '../../../repositories/tokens';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
