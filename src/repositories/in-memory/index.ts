@@ -5,3 +5,4 @@ export * from './in-memory-review.repository';
 export * from './in-memory-series.repository';
 export * from './in-memory-user.repository';
 export * from './in-memory-user-book-list.repository';
+export * from './in-memory-book-suggestion.repository';

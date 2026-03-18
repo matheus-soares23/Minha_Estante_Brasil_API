@@ -86,6 +86,7 @@ model Genre {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   books BookGenre[]
+  bookSuggestions BookSuggestion[]
 
   @@map("genres")
 }
@@ -114,7 +115,8 @@ model User {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   bookList UserBookList[]
-  reviews  Review[]
+  reviews Review[]
+  bookSuggestions BookSuggestion[]
 
   @@map("users")
 }
@@ -198,4 +200,26 @@ model BookStatistics {
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@map("book_statistics")
+}
+
+model BookSuggestion {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  title           String    @db.VarChar(255)
+  genreId         Int       @map("genre_id")
+  type            BookType
+  publicationDate DateTime? @map("publication_date") @db.Date
+  synopsis        String?   @db.Text
+  coverImage      String?   @map("cover_image") @db.VarChar(1024)
+  pages           Int?
+  authors         String    @db.Text
+  seriesName      String?   @map("series_name") @db.VarChar(255)
+  seriesVolumes   Int?      @map("series_volumes")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Restrict)
+
+  @@map("book_suggestions")
 }

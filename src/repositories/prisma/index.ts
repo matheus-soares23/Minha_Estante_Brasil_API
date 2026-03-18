@@ -5,3 +5,4 @@ export * from './prisma-genre.repository';
 export * from './prisma-series.repository';
 export * from './prisma-review.repository';
 export * from './prisma-user-book-list.repository';
+export * from './prisma-book-suggestion.repository';

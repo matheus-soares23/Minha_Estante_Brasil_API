@@ -9,6 +9,7 @@ import { GenresModule } from './modules/genres/genres.module';
 import { SeriesModule } from './modules/series/series.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UserBookListModule } from './modules/user-book-list/user-book-list.module';
+import { BookSuggestionsModule } from './modules/book-suggestions/book-suggestions.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserBookListModule } from './modules/user-book-list/user-book-list.modu
     SeriesModule,
     ReviewsModule,
     UserBookListModule,
+    BookSuggestionsModule,
   ],
   controllers: [],
   providers: [],
