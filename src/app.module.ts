@@ -10,11 +10,13 @@ import { SeriesModule } from './modules/series/series.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UserBookListModule } from './modules/user-book-list/user-book-list.module';
 import { BookSuggestionsModule } from './modules/book-suggestions/book-suggestions.module';
+import { QueueModule } from './modules/queue/queue.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    QueueModule,
     AuthModule,
     AuthorsModule,
     BooksModule,

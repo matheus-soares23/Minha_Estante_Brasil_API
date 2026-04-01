@@ -260,14 +260,17 @@ describe('UsersService', () => {
       await service.update(user.id, { password: newPassword });
 
       const userInRepo = repository['users'][0];
-      const isMatch = await bcrypt.compare(newPassword, userInRepo.passwordHash);
+      const isMatch = await bcrypt.compare(
+        newPassword,
+        userInRepo.passwordHash,
+      );
       expect(isMatch).toBe(true);
     });
 
     it('should throw NotFoundException when updating non-existent user', async () => {
-      await expect(
-        service.update(999, { username: 'test' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { username: 'test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException when updating to existing username', async () => {
@@ -329,9 +332,7 @@ describe('UsersService', () => {
 
       await service.remove(user.id);
 
-      await expect(service.findOne(user.id)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne(user.id)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when removing non-existent user', async () => {

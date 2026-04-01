@@ -124,9 +124,9 @@ describe('GenresService', () => {
     });
 
     it('should throw NotFoundException when updating non-existent genre', async () => {
-      await expect(
-        service.update(999, { name: 'Test' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should update only specified fields', async () => {

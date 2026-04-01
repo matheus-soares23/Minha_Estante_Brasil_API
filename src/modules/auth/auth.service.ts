@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto, RegisterDto } from './dto';
+import { QueueService } from '../queue/queue.service';
 import * as bcrypt from 'bcrypt';
 
 export interface JwtPayload {
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly queueService: QueueService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -30,6 +32,17 @@ export class AuthService {
       username: user.username,
       role: user.role,
     });
+
+    await this.queueService.sendEmailJob(
+      user.email,
+      'Bem-vindo à Minha Estante Brasil!',
+      `Olá ${user.username}, seja bem-vindo!`,
+    );
+
+    await this.queueService.sendNotificationJob(
+      user.id,
+      'Sua conta foi criada com sucesso!',
+    );
 
     return { user, ...tokens };
   }

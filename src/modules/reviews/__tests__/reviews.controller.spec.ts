@@ -28,7 +28,13 @@ describe('ReviewsController (integration)', () => {
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ReviewsModule, BooksModule, AuthorsModule, AuthModule, UsersModule],
+      imports: [
+        ReviewsModule,
+        BooksModule,
+        AuthorsModule,
+        AuthModule,
+        UsersModule,
+      ],
     })
       .overrideProvider(REVIEW_REPOSITORY)
       .useClass(InMemoryReviewRepository)

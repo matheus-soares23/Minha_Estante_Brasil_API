@@ -266,7 +266,9 @@ describe('UsersController (integration)', () => {
     });
 
     it('should return 401 without authentication', () => {
-      return request(app.getHttpServer()).delete(`/users/${userId}`).expect(401);
+      return request(app.getHttpServer())
+        .delete(`/users/${userId}`)
+        .expect(401);
     });
   });
 });

@@ -221,9 +221,7 @@ export class InMemoryBookRepository implements IBookRepository {
     return this.userBookLists.filter((ubl) => ubl.bookId === bookId).length;
   }
 
-  async aggregateRatingsByBook(
-    bookId: number,
-  ): Promise<BookRatingAggregation> {
+  async aggregateRatingsByBook(bookId: number): Promise<BookRatingAggregation> {
     const ratings = this.userBookLists
       .filter((ubl) => ubl.bookId === bookId && ubl.rating !== null)
       .map((ubl) => ubl.rating!);
@@ -243,7 +241,10 @@ export class InMemoryBookRepository implements IBookRepository {
     this.userBookLists.push({ bookId, rating });
   }
 
-  removeUserBookListForTest(bookId: number, rating: number | null = null): void {
+  removeUserBookListForTest(
+    bookId: number,
+    rating: number | null = null,
+  ): void {
     const index = this.userBookLists.findIndex(
       (ubl) => ubl.bookId === bookId && ubl.rating === rating,
     );
