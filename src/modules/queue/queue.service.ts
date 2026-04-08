@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 
 @Injectable()
 export class QueueService {
+  private readonly logger = new Logger(QueueService.name);
+
   constructor(@InjectQueue('default-queue') private readonly queue: Queue) {}
 
   // Publisher: adiciona um job na fila
@@ -16,11 +18,12 @@ export class QueueService {
       },
     });
 
-    console.log(`Job ${job.id} adicionado à fila: ${jobName}`);
+    this.logger.log(`Job ${job.id} adicionado à fila: ${jobName}`);
     return job;
   }
 
   async sendEmailJob(email: string, subject: string, content: string) {
+    console.log(`Enviando email para ${email} com assunto "${subject}"`);
     return this.addJob('send-email', { email, subject, content });
   }
 

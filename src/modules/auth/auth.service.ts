@@ -39,11 +39,6 @@ export class AuthService {
       `Olá ${user.username}, seja bem-vindo!`,
     );
 
-    await this.queueService.sendNotificationJob(
-      user.id,
-      'Sua conta foi criada com sucesso!',
-    );
-
     return { user, ...tokens };
   }
 
