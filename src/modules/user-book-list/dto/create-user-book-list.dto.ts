@@ -11,9 +11,6 @@ import { ListStatus } from '@prisma/client';
 
 export class CreateUserBookListDto {
   @IsInt()
-  userId: number;
-
-  @IsInt()
   bookId: number;
 
   @IsOptional()

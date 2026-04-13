@@ -12,6 +12,8 @@ import {
 import { UserBookListService } from './user-book-list.service';
 import { CreateUserBookListDto, UpdateUserBookListDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { LoggedUser } from '../auth/decorators';
+import { User } from '@prisma/client';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user-book-list')
@@ -19,8 +21,14 @@ export class UserBookListController {
   constructor(private readonly userBookListService: UserBookListService) {}
 
   @Post()
-  create(@Body() createUserBookListDto: CreateUserBookListDto) {
-    return this.userBookListService.create(createUserBookListDto);
+  create(
+    @Body() createUserBookListDto: CreateUserBookListDto,
+    @LoggedUser() loggedUser: User,
+  ) {
+    return this.userBookListService.create(
+      createUserBookListDto,
+      loggedUser.id,
+    );
   }
 
   @Get()
@@ -33,9 +41,9 @@ export class UserBookListController {
     return this.userBookListService.findOne(id);
   }
 
-  @Get('user/:userId')
-  findByUser(@Param('userId', ParseIntPipe) userId: number) {
-    return this.userBookListService.findByUser(userId);
+  @Get('user')
+  findByUser(@LoggedUser() loggedUser: User) {
+    return this.userBookListService.findByUser(loggedUser.id);
   }
 
   @Patch(':id')

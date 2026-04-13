@@ -46,7 +46,6 @@ describe('UserBookListService', () => {
   describe('create', () => {
     it('should create a user book list entry successfully', async () => {
       const createDto = {
-        userId: 1,
         bookId: 1,
         status: ListStatus.reading,
         rating: 5,
@@ -55,11 +54,11 @@ describe('UserBookListService', () => {
         notes: 'Great book!',
       };
 
-      const result = await service.create(createDto);
+      const result = await service.create(createDto, 1);
 
       expect(result).toBeDefined();
       expect(result.id).toBe(1);
-      expect(result.userId).toBe(createDto.userId);
+      expect(result.userId).toBe(1);
       expect(result.bookId).toBe(createDto.bookId);
       expect(result.status).toBe(createDto.status);
       expect(result.rating).toBe(createDto.rating);
@@ -68,11 +67,10 @@ describe('UserBookListService', () => {
 
     it('should create a user book list entry without optional fields', async () => {
       const createDto = {
-        userId: 1,
         bookId: 1,
       };
 
-      const result = await service.create(createDto);
+      const result = await service.create(createDto, 1);
 
       expect(result).toBeDefined();
       expect(result.status).toBeNull();
@@ -83,25 +81,23 @@ describe('UserBookListService', () => {
 
     it('should call handleUserBookListAdded when creating with rating', async () => {
       const createDto = {
-        userId: 1,
         bookId: 1,
         rating: 4,
       };
 
-      await service.create(createDto);
+      await service.create(createDto, 1);
 
       expect(booksService.handleUserBookListAdded).toHaveBeenCalledWith(1, 4);
     });
 
     it('should convert date strings to Date objects', async () => {
       const createDto = {
-        userId: 1,
         bookId: 1,
         startDate: '2024-01-01',
         finishDate: '2024-02-01',
       };
 
-      const result = await service.create(createDto);
+      const result = await service.create(createDto, 1);
 
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.finishDate).toBeInstanceOf(Date);
@@ -110,9 +106,9 @@ describe('UserBookListService', () => {
 
   describe('findAll', () => {
     it('should return all user book list entries', async () => {
-      await service.create({ userId: 1, bookId: 1 });
-      await service.create({ userId: 1, bookId: 2 });
-      await service.create({ userId: 2, bookId: 1 });
+      await service.create({ bookId: 1 }, 1);
+      await service.create({ bookId: 2 }, 1);
+      await service.create({ bookId: 1 }, 2);
 
       const result = await service.findAll();
 
@@ -128,11 +124,13 @@ describe('UserBookListService', () => {
 
   describe('findOne', () => {
     it('should return a user book list entry by id', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        status: ListStatus.completed,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          status: ListStatus.completed,
+        },
+        1,
+      );
 
       const result = await service.findOne(entry.id);
 
@@ -151,9 +149,9 @@ describe('UserBookListService', () => {
 
   describe('findByUser', () => {
     it('should return all entries for a specific user', async () => {
-      await service.create({ userId: 1, bookId: 1 });
-      await service.create({ userId: 1, bookId: 2 });
-      await service.create({ userId: 2, bookId: 1 });
+      await service.create({ bookId: 1 }, 1);
+      await service.create({ bookId: 2 }, 1);
+      await service.create({ bookId: 1 }, 2);
 
       const result = await service.findByUser(1);
 
@@ -170,12 +168,14 @@ describe('UserBookListService', () => {
 
   describe('update', () => {
     it('should update a user book list entry successfully', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        status: ListStatus.reading,
-        rating: 3,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          status: ListStatus.reading,
+          rating: 3,
+        },
+        1,
+      );
 
       const updateDto = {
         status: ListStatus.completed,
@@ -198,11 +198,13 @@ describe('UserBookListService', () => {
     });
 
     it('should call handleUserBookListUpdated when rating changes', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        rating: 3,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          rating: 3,
+        },
+        1,
+      );
 
       jest.clearAllMocks();
 
@@ -216,11 +218,13 @@ describe('UserBookListService', () => {
     });
 
     it('should not call handleUserBookListUpdated when rating is not updated', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        status: ListStatus.reading,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          status: ListStatus.reading,
+        },
+        1,
+      );
 
       jest.clearAllMocks();
 
@@ -230,13 +234,15 @@ describe('UserBookListService', () => {
     });
 
     it('should update only specified fields', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        status: ListStatus.reading,
-        rating: 4,
-        progress: 50,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          status: ListStatus.reading,
+          rating: 4,
+          progress: 50,
+        },
+        1,
+      );
 
       const result = await service.update(entry.id, {
         progress: 75,
@@ -252,11 +258,13 @@ describe('UserBookListService', () => {
 
   describe('remove', () => {
     it('should remove a user book list entry successfully', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-        rating: 4,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+          rating: 4,
+        },
+        1,
+      );
 
       await service.remove(entry.id);
 
@@ -272,10 +280,12 @@ describe('UserBookListService', () => {
     });
 
     it('should call handleUserBookListRemoved even without rating', async () => {
-      const entry = await service.create({
-        userId: 1,
-        bookId: 1,
-      });
+      const entry = await service.create(
+        {
+          bookId: 1,
+        },
+        1,
+      );
 
       await service.remove(entry.id);
 

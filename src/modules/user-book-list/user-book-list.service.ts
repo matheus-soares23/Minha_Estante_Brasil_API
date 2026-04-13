@@ -12,9 +12,9 @@ export class UserBookListService {
     private readonly booksService: BooksService,
   ) {}
 
-  async create(createUserBookListDto: CreateUserBookListDto) {
+  async create(createUserBookListDto: CreateUserBookListDto, userId: number) {
     const userBookList = await this.userBookListRepository.create({
-      userId: createUserBookListDto.userId,
+      userId: userId,
       bookId: createUserBookListDto.bookId,
       status: createUserBookListDto.status,
       rating: createUserBookListDto.rating,
